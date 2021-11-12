@@ -1,0 +1,97 @@
+# Number of liked (and not un-liked) datasets found using similarity methods
+# and not found using the fulltext method in the first round of evaluations
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX sosa: <http://www.w3.org/ns/sosa/>
+PREFIX tree: <https://w3id.org/tree#>
+PREFIX ldes: <http://w3id.org/ldes#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+ 
+PREFIX odsim: <https://odsim.opendata.cz/ontology/>
+PREFIX actions: <https://odsim.opendata.cz/resource/concept-scheme/actions/>
+PREFIX methods: <https://odsim.opendata.cz/resource/concept-scheme/methods/>
+PREFIX useCases: <https://odsim.opendata.cz/resource/concept-scheme/use-cases/>
+ 
+SELECT ?user_name ?method_name ?useCase_name (COUNT(DISTINCT ?dataset) AS ?datasetCount) WHERE
+{
+  ?es a ldes:EventStream ;
+    odsim:user ?user ;
+    odsim:useCase ?useCase ;
+    odsim:method ?method ;
+    tree:member ?member .
+ 
+  ?method skos:prefLabel ?method_name .
+  ?useCase skos:prefLabel ?useCase_name .
+  ?user skos:prefLabel ?user_name .
+ 
+  #liked datasets and datasets in groups
+  ?member sosa:resultTime ?time ;
+          odsim:action actions:like .
+  {
+    ?member odsim:dataset ?dataset .
+  }
+  UNION
+  {
+    ?member odsim:children ?dataset .
+  }
+ 
+  #they are not disliked in the same run
+  FILTER NOT EXISTS {
+    ?es tree:member ?member2 .
+    ?member2 sosa:resultTime ?time2 ;
+             odsim:action actions:dislike .
+    {
+      ?member2 odsim:dataset ?dataset .
+    }
+    UNION
+    {
+      ?member2 odsim:children ?dataset .
+    }
+    FILTER(?member != ?member2)
+    FILTER(?time2 > ?time)
+  }
+ 
+  #found using tested similarity methods, i.e. not fulltext and not sandbox
+  FILTER(?method NOT IN(methods:tf_idf_cs, methods:fulltext))
+  #in the first round
+  FILTER(?useCase != useCases:use-case-x)
+ 
+  #and I did not found it using fulltext
+  FILTER NOT EXISTS {
+    ?es2 a ldes:EventStream ;
+        odsim:user ?user ;
+        odsim:useCase ?useCase ;
+        odsim:method methods:fulltext ;
+        tree:member ?member3 .
+   
+    #liked datasets and group using fulltext
+    ?member3 sosa:resultTime ?time3;
+             odsim:action actions:like .
+    {
+      ?member3 odsim:dataset ?dataset .
+    }
+    UNION
+    {
+      ?member3 odsim:children ?dataset .
+    }
+    #not disliked
+    FILTER NOT EXISTS {
+      ?es2 tree:member ?member4 .
+      ?member4 sosa:resultTime ?time4 ;
+               odsim:action actions:dislike .
+      {
+        ?member4 odsim:dataset ?dataset .
+      }
+      UNION
+      {
+        ?member4 odsim:children ?dataset .
+      }
+      FILTER(?member3 != ?member4)
+      FILTER(?time4 > ?time3)
+    }
+    FILTER(?es2 != ?es)
+  }      
+}
+GROUP BY ?user ?user_name ?method ?method_name ?useCase ?useCase_name
+ORDER BY ?user_name ?method_name ?useCase_name
