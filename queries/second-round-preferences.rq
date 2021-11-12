@@ -1,0 +1,57 @@
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX sosa: <http://www.w3.org/ns/sosa/>
+PREFIX tree: <https://w3id.org/tree#>
+PREFIX ldes: <http://w3id.org/ldes#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+ 
+PREFIX odsim: <https://odsim.opendata.cz/ontology/>
+PREFIX actions: <https://odsim.opendata.cz/resource/concept-scheme/actions/>
+PREFIX methods: <https://odsim.opendata.cz/resource/concept-scheme/methods/>
+PREFIX useCases: <https://odsim.opendata.cz/resource/concept-scheme/use-cases/>
+ 
+SELECT ?user_name ?type (COUNT(DISTINCT ?dataset) AS ?datasetCount) WHERE
+{
+  ?es a ldes:EventStream ;
+    odsim:user ?user ;
+    odsim:method methods:second-round ;
+    odsim:useCase useCases:use-case-x ;
+    tree:member ?member .
+ 
+  ?user skos:prefLabel ?user_name .
+ 
+  ?member sosa:resultTime ?time ;
+          odsim:href ?href;
+          odsim:action actions:like .
+  ?href odsim:pathname ?path .
+  {
+    ?member odsim:dataset ?dataset .
+  }
+  UNION
+  {
+    ?member odsim:children ?dataset .
+  }
+  #they are not disliked in the same run
+  FILTER NOT EXISTS {
+    ?es tree:member ?member2 .
+    ?member2 sosa:resultTime ?time2 ;
+             odsim:action actions:dislike .
+    {
+      ?member2 odsim:dataset ?dataset .
+    }
+    UNION
+    {
+      ?member2 odsim:children ?dataset .
+    }
+    FILTER(?member != ?member2)
+    FILTER(?time2 > ?time)
+  }
+  
+  VALUES (?path ?type) {
+    ("/datov%C3%A9-sady" "Fulltext"@en) 
+    ("/datov%C3%A1-sada" "Similarity"@en) 
+  }
+}
+GROUP BY ?user ?user_name ?type
+ORDER BY ?user_name
