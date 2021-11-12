@@ -1,0 +1,4 @@
+Evaluations data
+=========================
+- [`evaluations.tar.gz`](evaluations.tar.gz) contains JSON files collected by [a modified LinkedPipes DCAT-AP Viewer](https://github.com/linkedpipes/dcat-ap-viewer/tree/profile/dataset-similarity-evaluation) representing user generated events such as page navigation and liking of a dataset or dataset group
+- [`evaluations.ttl.gz`](evaluations.ttl.gz) contains the same data transformed to [RDF Turtle](https://www.w3.org/TR/turtle/), using the [Linked Data Event Streams](https://w3id.org/ldes/specification), [The Tree hypermedia specification](https://w3id.org/tree/specification) and the [Semantic Sensor Network Ontology](https://www.w3.org/TR/vocab-ssn/) by the [LinkedPipes ETL](https://etl.linkedpipes.com) [pipeline](../pipeline).
